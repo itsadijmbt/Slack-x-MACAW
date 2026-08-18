@@ -59,17 +59,12 @@ an `xoxp-` token. Copy it.
 
 ## Part C — wire the proxy
 
-In `slack-MACAW.py` set:
-
-```python
-SLACK_XOXP_TOKEN = "xoxp-...."     # the token from Part B
-```
-
-Run it:
+The token is read from the environment — never hardcoded. Run:
 
 ```bash
 source <venv>/bin/activate
 export MACAW_HOME="<macaw-client-dir>"
+export SLACK_XOXP_TOKEN="xoxp-...."     # the token from Part B
 python slack-MACAW.py
 ```
 
@@ -84,5 +79,6 @@ That tool surface is what the MAPL policy is written against.
 claude mcp add slack-MACAW --scope user \
   -- bash -lc 'source <venv>/bin/activate && \
      export MACAW_HOME="<macaw-client-dir>" && \
+     export SLACK_XOXP_TOKEN="xoxp-...." && \
      cd <this-dir> && python slack-MACAW.py'
 ```
