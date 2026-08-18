@@ -1,6 +1,6 @@
 {
   "policy_id": "app:slack-proxy",
-  "version": "0.4.0",
+  "version": "0.2.0",
   "scope": "global",
   "resources": [
     "tool:slack-proxy/slack_send_message",
@@ -17,37 +17,13 @@
     "tool:slack-proxy/slack_search_public_and_private"
   ],
   "attestations": [
-    "send_message_approval::{params.message != ''}",
-    "claude_agent_mention_approval::{ params.message MATCHES '*Claude*' }",
-    "claude_agent_userid_approval::{ params.message MATCHES '*U0BR5L6JSHF*' }",
-    "claude_agent_dm_approval::{ params.channel_id MATCHES 'U0BR5L6JSHF' }"
+    "send_message_approval::{params.message != ''}"
   ],
   "constraints": {
     "attestations": {
       "send_message_approval": {
         "approval_criteria": "user:adibhatt2203@gmail.com",
         "description": "Outbound Slack message -- requires the user's just-in-time approval before it is sent",
-        "timeout": 300,
-        "time_to_live": 300,
-        "one_time": true
-      },
-      "claude_agent_mention_approval": {
-        "approval_criteria": "user:adibhatt2203@gmail.com",
-        "description": "Message names the in-workspace Claude agent -- this can task an autonomous agent that commits to GitHub outside MACAW's enforcement. Requires explicit just-in-time sign-off.",
-        "timeout": 300,
-        "time_to_live": 300,
-        "one_time": true
-      },
-      "claude_agent_userid_approval": {
-        "approval_criteria": "user:adibhatt2203@gmail.com",
-        "description": "Message carries the encoded mention <@U0BR5L6JSHF> for the Claude agent -- requires explicit just-in-time sign-off.",
-        "timeout": 300,
-        "time_to_live": 300,
-        "one_time": true
-      },
-      "claude_agent_dm_approval": {
-        "approval_criteria": "user:adibhatt2203@gmail.com",
-        "description": "Direct message addressed to the Claude agent (channel_id is its user id) -- requires explicit just-in-time sign-off.",
         "timeout": 300,
         "time_to_live": 300,
         "one_time": true
@@ -106,5 +82,5 @@
       }
     }
   },
-  "description": "Slack MCP via SecureMCPProxy -- reads, public search, all channels and user-to-user DMs open; the Jira app is fully usable. Nothing Claude-related is hard-denied: naming the in-workspace Claude agent (by name, by encoded id <@U0BR5L6JSHF>, or by DM) raises a second, distinct just-in-time attestation on top of the standard send approval, so tasking an autonomous agent is a deliberate two-step act. Outbound send always requires user approval; scheduled send and private/DM search denied; message secret-screened and size-capped."
+  "description": "Slack MCP via SecureMCPProxy -- reads + public search open; outbound send requires just-in-time user approval; scheduled send and private/DM search denied; message secret-screened and size-capped."
 }
