@@ -1,6 +1,6 @@
 {
   "policy_id": "app:slack-proxy",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "scope": "global",
   "resources": [
     "tool:slack-proxy/slack_send_message",
@@ -17,21 +17,21 @@
     "tool:slack-proxy/slack_search_public_and_private"
   ],
   "attestations": [
-    "send_message_approval::{params.message != '' AND NOT (params.message MATCHES '*U0BR5L6JSHF*') AND NOT (params.channel_id MATCHES 'U0BR5L6JSHF')}",
-    "claude_agent_approval::{params.message MATCHES '*U0BR5L6JSHF*' OR params.channel_id MATCHES 'U0BR5L6JSHF'}"
+    "send_message_approval::{params.message != '' AND params.tasks_claude == 'no'}",
+    "claude_agent_approval::{params.tasks_claude == 'yes' AND params.github_intent != 'read'}"
   ],
   "constraints": {
     "attestations": {
       "send_message_approval": {
         "approval_criteria": "user:adibhatt2203@gmail.com",
-        "description": "Outbound Slack message that does NOT task the Claude agent -- requires the user's just-in-time approval before it is sent.",
+        "description": "Outbound Slack message that does NOT task the Claude agent. The approver reviews the exact message before it is sent.",
         "timeout": 300,
         "time_to_live": 300,
         "one_time": true
       },
       "claude_agent_approval": {
         "approval_criteria": "user:adibhatt2203@gmail.com",
-        "description": "Message tasks the in-workspace Claude agent (encoded mention <@U0BR5L6JSHF> or a DM whose channel_id is its user id). Claude can act on GitHub outside MACAW's enforcement, so tasking it requires explicit just-in-time sign-off.",
+        "description": "A non-read task to the in-workspace Claude agent (write or destructive intent, or an intent the classifier could not read as safe). Claude acts on GitHub outside MACAW, so every such task blocks for the approver, who reviews the exact triggering message. Reads pass; private/denied-org repos are hard-denied earlier.",
         "timeout": 300,
         "time_to_live": 300,
         "one_time": true
@@ -41,12 +41,14 @@
       "tool:slack-proxy/slack_send_message": {
         "channel_id": {"type": "string", "min_length": 1, "max_length": 64, "pattern": "^[A-Za-z0-9]+$"},
         "message": {"type": "string", "min_length": 1, "max_length": 4000},
-        "thread_ts": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"}
+        "thread_ts": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+        "repo_scope": {"type": "string", "allowed_values": ["public", "none"]}
       },
       "tool:slack-proxy/slack_send_message_draft": {
         "channel_id": {"type": "string", "min_length": 1, "max_length": 64, "pattern": "^[A-Za-z0-9]+$"},
         "message": {"type": "string", "min_length": 1, "max_length": 4000},
-        "thread_ts": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"}
+        "thread_ts": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+        "repo_scope": {"type": "string", "allowed_values": ["public", "none"]}
       },
       "tool:slack-proxy/slack_search_public": {
         "query": {"type": "string", "min_length": 1, "max_length": 500},
@@ -90,5 +92,5 @@
       }
     }
   },
-  "description": "Slack MCP via SecureMCPProxy -- reads and public search open. Every outbound send needs the user's just-in-time approval, via exactly one of two mutually-exclusive gates: a normal send raises send_message_approval; a send that tasks the in-workspace Claude agent (encoded mention <@U0BR5L6JSHF> or a DM to it) raises claude_agent_approval instead. Any message naming the macawsecurity org is hard-denied before approval, so Claude can never be tasked against workplace repos. Scheduled send and private/DM search denied; message secret-screened and size-capped."
+  "description": "Slack MCP via SecureMCPProxy with the SlackTaskVerifier stamping tasks_claude / github_intent / repo_scope on outbound sends. Reads and public search are open. Defaults to human approval: a normal send needs approval (send_message_approval); every non-read task to the in-workspace Claude agent -- write, destructive, or an intent not readable as safe -- blocks for the approver, who reviews the exact triggering message (claude_agent_approval). Only a private or denied-org repo is hard-denied (repo_scope), a fact GitHub resolves live and no rephrasing can dodge. Scheduled send and private/DM search denied; message secret- and org-screened and size-capped."
 }

@@ -82,3 +82,60 @@ claude mcp add slack-MACAW --scope user \
      export SLACK_XOXP_TOKEN="xoxp-...." && \
      cd <this-dir> && python slack-MACAW.py'
 ```
+
+---
+
+## How the guard works
+
+The workspace has an in-house **Claude agent** that acts on GitHub *outside* MACAW.
+So a Slack message can quietly *task* that agent — Slack becomes a remote control for
+an agent MACAW can't see. This guard sits on the **outbound message** and governs that.
+
+Two pieces do the work:
+
+- **The verifier** (`slack_task_verifier.py`) — reads the message *before* it's sent and
+  writes down three facts about it.
+- **The policy** (`Policy/server_policy_v0.6.0.json`) — reads those three facts and decides:
+  let it through, ask a human, or block it outright.
+
+### What the verifier writes down (the three "stamps")
+
+| Stamp | Possible values | In plain words |
+|---|---|---|
+| `tasks_claude` | `yes` / `no` | Is this message tasking the Claude agent? (mentions `@Claude` or DMs it) |
+| `github_intent` | `read` / `write` / `destructive` / `none` | What is it asking Claude to *do*? (`summarize` → read, `open a PR` → write, `delete`/`force-push`/`drop table` → destructive) |
+| `repo_scope` | `public` / `private` / `none` | Which repo, and is it public or private? Checked **live against GitHub**. `none` = no repo named |
+
+It only looks at *outbound sends* (never reads/searches), and it only classifies intent/repo
+when the message is actually tasking Claude — a normal message is left alone.
+
+### What the policy does with them
+
+| The message is… | Decision |
+|---|---|
+| A task to Claude on a **private / blocked repo** | **BLOCKED** outright (no override — decided by GitHub's live answer) |
+| A task to Claude that **writes / deletes / is unclear** | **Held for your approval** (Approve / Deny in the console) |
+| A task to Claude that only **reads** (summarize, list) | **Allowed** — flows straight through |
+| A **normal** message (not tasking Claude) | **Held for your approval** |
+| A read or search tool | **Allowed** — the guard doesn't touch reads |
+
+When something is held for approval, the console card shows the **actual message** so you
+know exactly what you're approving before you click.
+
+### Two honest limits
+
+- **The block needs the full repo name.** It only recognizes a repo written as `owner/repo`
+  (e.g. `itsadijmbt/Garuda-Kernel-IPS`). A bare name (`Garuda-Kernel-IPS`) isn't checked, so
+  it falls into the *approval* lane instead of the hard block. (Set a default owner to close this.)
+- **Intent is a best-effort guess.** It matches known words, so a synonym like "nuke" isn't
+  labelled destructive — but anything that isn't a clear *read* still goes to a human, so it
+  never slips through silently.
+
+### Config (optional, via environment)
+
+```bash
+SLACK_CLAUDE_USER_ID   # the Claude agent's Slack id (default: U0BR5L6JSHF)
+SLACK_DENIED_ORGS      # GitHub orgs to always block, comma-separated (default: macawsecurity)
+SLACK_ALLOWED_REPOS    # only these repos allowed, comma-separated (default: any public repo)
+GITHUB_TOKEN           # optional; makes the public/private check faster and more accurate
+```

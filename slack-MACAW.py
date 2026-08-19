@@ -18,6 +18,7 @@ import logging
 
 import httpx as _httpx
 from macaw_adapters.mcp import SecureMCPProxy, Client
+from slack_task_verifier import SlackTaskVerifier
 
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
@@ -46,6 +47,8 @@ proxy = SecureMCPProxy(
     upstream_auth={"type": "bearer", "token": SLACK_XOXP_TOKEN},
 )
 logging.info("slack-proxy: %d tools; serving native clients", len(proxy.list_tools()))
+
+proxy.macaw_client.agent.verification_pipeline.add_verifier(SlackTaskVerifier(), priority=20)
 
 client = Client("slack-macaw-gateway")
 bound = proxy.bind_to_user(client.macaw_client)
