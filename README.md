@@ -9,7 +9,7 @@
 
 ---
 
-## Part A — Slack app (one-time, in the Slack UI)
+## Part A : Slack app (one-time, in the Slack UI)
 
 Slack's hosted MCP does **not** support Dynamic Client Registration, so you bring
 your own pre-registered app.
@@ -19,7 +19,7 @@ your own pre-registered app.
 
 2. **OAuth & Permissions → Redirect URLs:**
    → Add New Redirect URL: `http://localhost:8080/callback`
-   (http, **not** https; no trailing slash — must match exactly)
+   (http, **not** https; no trailing slash : must match exactly)
    → **Save URLs** ← easy to miss; the URL doesn't count until saved.
 
 3. **OAuth & Permissions → Scopes → USER Token Scopes** (not Bot token scopes;
@@ -38,11 +38,11 @@ your own pre-registered app.
    `https://api.slack.com/apps/<APP_ID>/app-assistant`
    Without this, `mcp.slack.com` rejects the token even though it is valid.
 
-5. **Basic Information → App Credentials** — copy the Client ID and Client Secret.
+5. **Basic Information → App Credentials** : copy the Client ID and Client Secret.
 
 ---
 
-## Part B — mint the token (one-time)
+## Part B : mint the token (one-time)
 
 ```bash
 cd <this-dir>
@@ -57,9 +57,9 @@ an `xoxp-` token. Copy it.
 
 ---
 
-## Part C — wire the proxy
+## Part C : wire the proxy
 
-The token is read from the environment — never hardcoded. Run:
+The token is read from the environment : never hardcoded. Run:
 
 ```bash
 source <venv>/bin/activate
@@ -73,7 +73,7 @@ That tool surface is what the MAPL policy is written against.
 
 ---
 
-## Part D — register with Claude Code (optional)
+## Part D : register with Claude Code (optional)
 
 ```bash
 claude mcp add slack-MACAW --scope user \
@@ -87,15 +87,9 @@ claude mcp add slack-MACAW --scope user \
 
 ## How the guard works
 
-The workspace has an in-house **Claude agent** that acts on GitHub *outside* MACAW.
-So a Slack message can quietly *task* that agent — Slack becomes a remote control for
-an agent MACAW can't see. This guard sits on the **outbound message** and governs that.
-
-Two pieces do the work:
-
-- **The verifier** (`slack_task_verifier.py`) — reads the message *before* it's sent and
+- **The verifier** (`slack_task_verifier.py`) : reads the message *before* it's sent and
   writes down three facts about it.
-- **The policy** (`Policy/server_policy_v0.6.0.json`) — reads those three facts and decides:
+- **The policy** (`Policy/server_policy_v0.6.0.json`) : reads those three facts and decides:
   let it through, ask a human, or block it outright.
 
 ### What the verifier writes down (the three "stamps")
@@ -107,28 +101,26 @@ Two pieces do the work:
 | `repo_scope` | `public` / `private` / `none` | Which repo, and is it public or private? Checked **live against GitHub**. `none` = no repo named |
 
 It only looks at *outbound sends* (never reads/searches), and it only classifies intent/repo
-when the message is actually tasking Claude — a normal message is left alone.
+when the message is actually tasking Claude : a normal message is left alone.
 
 ### What the policy does with them
 
 | The message is… | Decision |
 |---|---|
-| A task to Claude on a **private / blocked repo** | **BLOCKED** outright (no override — decided by GitHub's live answer) |
+| A task to Claude on a **private / blocked repo** | **BLOCKED** outright (no override : decided by GitHub's live answer) |
 | A task to Claude that **writes / deletes / is unclear** | **Held for your approval** (Approve / Deny in the console) |
-| A task to Claude that only **reads** (summarize, list) | **Allowed** — flows straight through |
+| A task to Claude that only **reads** (summarize, list) | **Allowed** : flows straight through |
 | A **normal** message (not tasking Claude) | **Held for your approval** |
-| A read or search tool | **Allowed** — the guard doesn't touch reads |
+| A read or search tool | **Allowed** : the guard doesn't touch reads |
 
 When something is held for approval, the console card shows the **actual message** so you
 know exactly what you're approving before you click.
 
 ### Two honest limits
 
-- **The block needs the full repo name.** It only recognizes a repo written as `owner/repo`
-  (e.g. `itsadijmbt/Garuda-Kernel-IPS`). A bare name (`Garuda-Kernel-IPS`) isn't checked, so
-  it falls into the *approval* lane instead of the hard block. (Set a default owner to close this.)
+- **The block needs the full repo name.** It only recognizes a repo written as `owner/repo` (Set a default owner to close this.)
 - **Intent is a best-effort guess.** It matches known words, so a synonym like "nuke" isn't
-  labelled destructive — but anything that isn't a clear *read* still goes to a human, so it
+  labelled destructive : but anything that isn't a clear *read* still goes to a human, so it
   never slips through silently.
 
 ### Config (optional, via environment)
