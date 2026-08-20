@@ -7,6 +7,44 @@
 > Scheduled sends and private-channel search: denied.
 > The Slack credential never leaves the proxy.
 
+```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontSize':'14px','lineColor':'#495057','clusterBkg':'#ffffff','clusterBorder':'#e03131'}}}%%
+flowchart LR
+    C["<b>Client</b><br/>e.g. claude-code"]
+
+    subgraph MACAW["MACAW Trust-Layer"]
+        direction TB
+        IB["Identity Bridge<br/><i>identity flows from your IdP</i>"]
+        PS["Policy Store<br/><i>MAPL</i>"]
+        PE["Policy Enforcement"]
+        AT["Attestation — HIL"]
+        AL["Audit Logs"]
+        IB ~~~ PS ~~~ PE ~~~ AT ~~~ AL
+    end
+
+    S["<b>Slack MCP Server</b><br/><i>0 upstream changes</i>"]
+
+    C -->|MCP call| MACAW
+    MACAW -->|policy-checked call| S
+
+    MAPL["<b>MAPL policy, in brief</b><br/>1 · simple JSON format<br/>2 · control over tools, params and<br/>resources, tied to user identity<br/>3 · built-in human-in-the-loop for<br/>sensitive approvals<br/>4 · pluggable verification pipeline<br/>for custom customer code"]
+    NOTE["<b>Note</b><br/>1 · Claude here is a plugin added<br/>2 · policy uses fixed channel names and ids —<br/>change them to fit your workspace"]
+    MACAW -.- MAPL
+    MACAW -.- NOTE
+
+    classDef client fill:#e7f5ff,stroke:#1971c2,stroke-width:1.5px,color:#0b3d61
+    classDef core fill:#fff5f5,stroke:#e03131,stroke-width:1.5px,color:#7d1a1a
+    classDef server fill:#ebfbee,stroke:#2f9e44,stroke-width:1.5px,color:#14532d
+    classDef note fill:#fff9db,stroke:#f08c00,stroke-width:1px,color:#7a4d00
+    classDef sidenote fill:#f4fce3,stroke:#2f9e44,stroke-width:1px,color:#14532d
+
+    class C client
+    class IB,PS,PE,AT,AL core
+    class S server
+    class MAPL note
+    class NOTE sidenote
+```
+
 ---
 
 ## Part A : Slack app (one-time, in the Slack UI)
